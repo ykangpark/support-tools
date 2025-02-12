@@ -223,7 +223,6 @@ function removeUnnecessaryCommandFields(object) {
     });
 }
 
-var _firstJSONArrayElement = true;
 var _jsonOutBuffer = ""; 
 function printInfo(message, command, section, printCapture, commandParameters) {
     var result = false;
@@ -276,9 +275,8 @@ function printInfo(message, command, section, printCapture, commandParameters) {
 
     // Stream JSON array element.
     if (_printJSON) {
-        if (_firstJSONArrayElement) {
+        if (!_jsonOutBuffer) {
             _jsonOutBuffer = JSON.stringify(doc, jsonStringifyReplacer, 4);
-            _firstJSONArrayElement = false;
         }
         else {
             print(_jsonOutBuffer, ",");
