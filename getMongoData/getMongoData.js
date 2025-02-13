@@ -568,22 +568,16 @@ function printDataInfo(isMongoS) {
 
     if (dbs.databases) {
         dbs.databases.forEach(function(mydb) {
-            var collections = printInfo("List of collections for database '"+ mydb.name +"'",
-                function() {
-                    var collections = []
+            var collections = [];
+            // Filter out views
+            db.getSiblingDB(mydb.name).getCollectionInfos({"type": "collection"}).forEach(function(collectionInfo) {
+              collections.push(collectionInfo);
+            })
 
-                    // Filter out views
-                    db.getSiblingDB(mydb.name).getCollectionInfos({"type": "collection"}).forEach(function(collectionInfo) {
-                      collections.push(collectionInfo);
-                    })
-
-                    // Filter out the collections with the "system." prefix in the system databases
-                    if (mydb.name == "config" || mydb.name == "local" || mydb.name == "admin") {
-                        return collections.filter(function (collection) { return !collection['name'].startsWith("system.") });
-                    } else {
-                        return collections;
-                    }
-                }, section);
+            // Filter out the collections with the "system." prefix in the system databases
+            if (mydb.name == "config" || mydb.name == "local" || mydb.name == "admin") {
+              collections = collections.filter(function (collection) { return !collection['name'].startsWith("system.") });
+            }
             
             printInfo('Database stats (MB)',
                       function(){return db.getSiblingDB(mydb.name).stats(1024*1024)}, section);
@@ -629,7 +623,14 @@ function printDataInfo(isMongoS) {
                     }
 
                     printInfo('Indexes',
-                              function(){return db.getSiblingDB(mydb.name).getCollection(col).getIndexes()}, section, false, {"db": mydb.name, "collection": col});
+                              function() {
+                                let indexes = [];
+                                db.getSiblingDB(mydb.name).getCollection(col).getIndexes().forEach(index => {
+                                  delete index['name'];
+                                  indexes.push(index);
+                                });
+                                return indexes;
+                              }, section, false, {"db": mydb.name, "collection": col});
 
                     printInfo('Index Stats',
                               function(){
@@ -659,6 +660,12 @@ function printDataInfo(isMongoS) {
                                 return res;
                               }, section);
                 });
+                collections.forEach(collection => {
+                  delete collection['name'];
+                });
+                printInfo("list of collections for database " + mydb.name + "", function() {
+                  return collections;
+                }, section);
             }
         });
     }
