@@ -566,60 +566,25 @@ function printDataInfo(isMongoS) {
       return dbs.databases.length;
     });
 
-    let specialCollectionTypes = {capped: 0, timeseries: 0};
-
-    let indexTypes = {
-      '2d': {
-        single: 0,
-        compound: 0,
-      },
-      '2dsphere': {
-        single: 0,
-        compound: 0,
-      },
-      text: {
-        single: 0,
-        compound: 0,
-      },
-      hashed: {
-        single: 0,
-        compound: 0,
-      },
-      wildcard: {
-        single: 0,
-        compound: 0,
-      },
-      standard: {
-        single: 0,
-        compound: 0,
-      },
-    };
-
     if (dbs.databases) {
         dbs.databases.forEach(function(mydb) {
             var collections = printInfo("List of collections for database '"+ mydb.name +"'",
                 function() {
-                    var collectionNames = []
+                    var collections = []
 
                     // Filter out views
                     db.getSiblingDB(mydb.name).getCollectionInfos({"type": "collection"}).forEach(function(collectionInfo) {
-                        collectionNames.push(collectionInfo['name']);
-
-                        if (collectionInfo.options.capped === true) {
-                          specialCollectionTypes['capped'] += 1;
-                        } else if (collectionInfo.type === 'timeseries') {
-                          specialCollectionTypes['timeseries'] += 1;
-                        }
+                      collections.push(collectionInfo);
                     })
 
                     // Filter out the collections with the "system." prefix in the system databases
                     if (mydb.name == "config" || mydb.name == "local" || mydb.name == "admin") {
-                        return collectionNames.filter(function (str) { return str.indexOf("system.") != 0; });
+                        return collections.filter(function (collection) { return !collection['name'].startsWith("system.") });
                     } else {
-                        return collectionNames;
+                        return collections;
                     }
                 }, section);
-
+            
             printInfo('Database stats (MB)',
                       function(){return db.getSiblingDB(mydb.name).stats(1024*1024)}, section);
             if (!isMongoS) {
@@ -628,11 +593,8 @@ function printDataInfo(isMongoS) {
             }
 
             if (collections) {
-                collections.forEach(function(col) {
-
-                  const collectionObject =
-                      db.getSiblingDB(mydb.name).getCollection(col);
-
+                collections.forEach(function(collection) {
+                    const col = collection['name'];
                     printInfo('Collection stats (MB)',
                               function(){return db.getSiblingDB(mydb.name).getCollection(col).stats(1024*1024)}, section);
                     collections_counter++;
@@ -666,35 +628,8 @@ function printDataInfo(isMongoS) {
                         }, section, true);
                     }
 
-                    const indexes = collectionObject.getIndexes();
                     printInfo('Indexes',
-                              function(){return indexes}, section, false, {"db": mydb.name, "collection": col});
-                    
-                              indexes.forEach((index) => {
-                                if (index.key) {
-                                  let indexShape =
-                                      (Object.keys(index.key).length > 1) ? 'compound' : 'single';
-                                  let indexType =
-                                      Object.values(index.key).find(x => typeof x === 'string');
-                                  if (indexType === undefined) {
-                                    if (Object.keys(index.key).some(
-                                            (key) => key === '$**' || key.endsWith('.$**'))) {
-                                      indexType = 'wildcard';
-                                    } else {
-                                      indexType = 'standard';
-                                    }
-                                  }
-
-                                  // Single text indexes keys are stored as { _fts: 'text', _ftsx:
-                                  // 1 } and so compound index keys will be longer
-                                  if (indexType === 'text' && Object.keys(index.key).length < 3) {
-                                    indexShape = 'single';
-                                  }
-                                  indexTypes[indexType][indexShape] += 1;
-                                } else {
-                                  indexesNotCounted.indexes.push(index);
-                                }
-                              });
+                              function(){return db.getSiblingDB(mydb.name).getCollection(col).getIndexes()}, section, false, {"db": mydb.name, "collection": col});
 
                     printInfo('Index Stats',
                               function(){
@@ -727,15 +662,6 @@ function printDataInfo(isMongoS) {
             }
         });
     }
-
-    printInfo('Special Collection Types', function() {
-      return specialCollectionTypes;
-    }, section);
-
-    printInfo('Index Types', function() {
-      return indexTypes;
-    }, section);
-
     printInfo("Queryable Encryption Info", function(){
         return collectQueryableEncryptionInfo(isMongoS);}, section, false);
 }
