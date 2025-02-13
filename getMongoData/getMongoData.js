@@ -348,6 +348,8 @@ function printDriverVersions() {
 }
 
 function printOplogChurn(isMongoS, topology) {
+  const section = 'Oplog Churn'
+  
   if (isMongoS === false && topology !== 'standalone') {
     (typeof readPref === 'undefined') &&
         !!(readPref = (db.isMaster().secondary == false) ?
@@ -396,8 +398,6 @@ function printOplogChurn(isMongoS, topology) {
     let overhead = internalPageSize;
     let ratio = +((size / (storageSize - blocksFree - overhead)).toFixed(2));
     let oplogChurn = opSize / ratio / intervalHrs;
-
-    const section = 'Oplog Churn'
 
     printInfo('Oplog Churn Rate', function() {
       return oplogChurn;
