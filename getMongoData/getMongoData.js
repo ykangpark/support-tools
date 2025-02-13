@@ -281,7 +281,7 @@ function printServerInfo() {
     printInfo('db',                 function(){return db.getName()}, section);
     let serverStatus = db.serverStatus();
     const writesPerSecond = calculateWritesPerSecond(serverStatus);
-    printInfo('Writes Per Pecond', function() { 
+    printInfo('Writes Per Second', function() { 
       return writesPerSecond
     }, section);
 
@@ -404,7 +404,7 @@ function printOplogChurn(isMongoS, topology) {
     }, section);
   } else {
     printInfo('Oplog Churn Rate', function() {
-      'Oplog does not exist on standalone nodes';
+      'Oplog does not exist on standalone nodes or mongos';
     }, section);
   }
 }
@@ -733,6 +733,14 @@ function printDataInfo(isMongoS) {
             }
         });
     }
+
+    printInfo('Special Collection Types', function() {
+      return specialCollectionTypes;
+    }, section);
+
+    printInfo('Index Types', function() {
+      return indexTypes;
+    }, section);
 
     printInfo("Queryable Encryption Info", function(){
         return collectQueryableEncryptionInfo(isMongoS);}, section, false);
