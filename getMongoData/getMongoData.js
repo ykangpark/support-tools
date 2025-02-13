@@ -604,6 +604,12 @@ function printDataInfo(isMongoS) {
                     // Filter out views
                     db.getSiblingDB(mydb.name).getCollectionInfos({"type": "collection"}).forEach(function(collectionInfo) {
                         collectionNames.push(collectionInfo['name']);
+
+                        if (collectionInfo.options.capped === true) {
+                          specialCollectionTypes['capped'] += 1;
+                        } else if (collectionInfo.type === 'timeseries') {
+                          specialCollectionTypes['timeseries'] += 1;
+                        }
                     })
 
                     // Filter out the collections with the "system." prefix in the system databases
@@ -624,20 +630,8 @@ function printDataInfo(isMongoS) {
             if (collections) {
                 collections.forEach(function(col) {
 
-                  // Determine if a collection is a view, since views cannot have
-                  // indexes be queried
-                  if (col.type === 'view') {
-                    return;
-                  }
-
                   const collectionObject =
                       db.getSiblingDB(mydb.name).getCollection(col);
-
-                  if (collectionObject.options.capped === true) {
-                    specialCollectionTypes['capped'] += 1;
-                  } else if (collectionObject.type === 'timeseries') {
-                    specialCollectionTypes['timeseries'] += 1;
-                  }
 
                     printInfo('Collection stats (MB)',
                               function(){return db.getSiblingDB(mydb.name).getCollection(col).stats(1024*1024)}, section);
