@@ -265,7 +265,7 @@ function printServerInfo() {
     printInfo('Shell version',      version, section);
     printInfo('Shell hostname',     hostname, section);
     printInfo('db',                 function(){return db.getName()}, section);
-    printInfo('Server status info', function() {return db.serverStatus()}, section);
+    printInfo('Server status info', function(){return db.serverStatus()}, section);
     printInfo('Host info',          function(){return db.hostInfo()}, section);
     printInfo('Command line info',  function(){return db.serverCmdLineOpts()}, section);
     printInfo('Server build info',  function(){return db.serverBuildInfo()}, section);
