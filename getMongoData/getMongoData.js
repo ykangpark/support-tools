@@ -494,7 +494,7 @@ function printDataInfo(isMongoS) {
                         return collectionNames;
                     }
                 }, section);
-            
+
             printInfo('Database stats (MB)',
                       function(){return db.getSiblingDB(mydb.name).stats(1024*1024)}, section);
             if (!isMongoS) {
@@ -536,9 +536,8 @@ function printDataInfo(isMongoS) {
                             return result;
                         }, section, true);
                     }
-
                     printInfo('Indexes',
-                        function(){return db.getSiblingDB(mydb.name).getCollection(col).getIndexes()}, section, false, {"db": mydb.name, "collection": col});
+                              function(){return db.getSiblingDB(mydb.name).getCollection(col).getIndexes()}, section, false, {"db": mydb.name, "collection": col});
 
                     printInfo('Index Stats',
                               function(){
@@ -651,7 +650,7 @@ var _host = hostname();
 
 try {
     printServerInfo();
-    let isMongoS = printShardOrReplicaSetInfo();
+    var isMongoS = printShardOrReplicaSetInfo();
     printUserAuthInfo();
     printDataInfo(isMongoS);
     printDriverVersions();
