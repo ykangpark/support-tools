@@ -538,7 +538,6 @@ function printDataInfo(isMongoS) {
                     }
                     printInfo('Indexes',
                               function(){return db.getSiblingDB(mydb.name).getCollection(col).getIndexes()}, section, false, {"db": mydb.name, "collection": col});
-
                     printInfo('Index Stats',
                               function(){
                                 var res = db.getSiblingDB(mydb.name).runCommand( {
@@ -570,6 +569,7 @@ function printDataInfo(isMongoS) {
             }
         });
     }
+
     printInfo("Queryable Encryption Info", function(){
         return collectQueryableEncryptionInfo(isMongoS);}, section, false);
 }
@@ -593,9 +593,7 @@ function printShardOrReplicaSetInfo() {
         if ( info && info.length < 20 ) {
             state = info; // "mongos", "configsvr"
         }
-        if ( ! state ) {
-          state = "standalone";
-        }
+        if ( ! state ) state = "standalone";
     }
     if (! _printJSON) print("\n** Connected to " + state);
     if (state == "mongos") {
