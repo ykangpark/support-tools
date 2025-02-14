@@ -475,10 +475,6 @@ function printDataInfo(isMongoS) {
     section = "data_info";
     var dbs = printInfo('List of databases', function(){return db.getMongo().getDBs()}, section);
     var collections_counter = 0;
-    
-    printInfo('Number of databases', function() {
-      return dbs.databases.length;
-    });
 
     if (dbs.databases) {
         dbs.databases.forEach(function(mydb) {
@@ -662,11 +658,11 @@ if (! _printJSON) {
 var _host = hostname();
 
 try {
-  printServerInfo();
-  let isMongoS = printShardOrReplicaSetInfo();
-  printUserAuthInfo();
-  printDataInfo(isMongoS);
-  printDriverVersions();
+    printServerInfo();
+    let isMongoS = printShardOrReplicaSetInfo();
+    printUserAuthInfo();
+    printDataInfo(isMongoS);
+    printDriverVersions();
 } catch(e) {
     // To ensure that the operator knows there was an error, print the error
     // even when outputting JSON to make it invalid JSON.
