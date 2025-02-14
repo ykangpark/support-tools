@@ -260,36 +260,12 @@ function printInfo(message, command, section, printCapture, commandParameters) {
     return result;
 }
 
-function calculateWritesPerSecond(initialServerStatus) {
-  const initialInsert = initialServerStatus.opcounters.insert;
-  const initialUpdate = initialServerStatus.opcounters.update;
-  const initialDelete = initialServerStatus.opcounters.delete;
-  const initialWrites = initialInsert + initialUpdate + initialDelete;
-  sleep(1000);
-  const newServerStatus = db.serverStatus();
-  const newInsert = newServerStatus.opcounters.insert;
-  const newUpdate = newServerStatus.opcounters.update;
-  const newDelete = newServerStatus.opcounters.delete;
-  const newWrites = newInsert + newUpdate + newDelete;
-  return newWrites - initialWrites;
-}
-
 function printServerInfo() {
     section = "server_info";
     printInfo('Shell version',      version, section);
     printInfo('Shell hostname',     hostname, section);
     printInfo('db',                 function(){return db.getName()}, section);
-    let serverStatus = db.serverStatus();
-    const writesPerSecond = calculateWritesPerSecond(serverStatus);
-    printInfo('Writes Per Second', function() { 
-      return writesPerSecond
-    }, section);
-
-    // Update serverStatus to get latest status
-    serverStatus = db.serverStatus();
-    printInfo('Server status info', function() {
-      return serverStatus
-    }, section);
+    printInfo('Server status info', function() {return db.serverStatus()}, section);
     printInfo('Host info',          function(){return db.hostInfo()}, section);
     printInfo('Command line info',  function(){return db.serverCmdLineOpts()}, section);
     printInfo('Server build info',  function(){return db.serverBuildInfo()}, section);
@@ -345,68 +321,6 @@ function printDriverVersions() {
         ])
         .toArray();
   }, section);
-}
-
-function printOplogChurn(isMongoS, topology) {
-  const section = 'Oplog Churn'
-  
-  if (isMongoS === false && topology !== 'standalone') {
-    (typeof readPref === 'undefined') &&
-        !!(readPref = (db.isMaster().secondary == false) ?
-               'primaryPreferred' :
-               'secondaryPreferred');
-    let opSize = 0, docs = 0, date = new Date();
-    let intervalHrs = 1;
-    let t2 = Math.floor(date.getTime() / 1000.0), d2 = date.toISOString(),
-        t1 = Math.floor(date.setHours(date.getHours() - intervalHrs) / 1000.0),
-        d1 = date.toISOString(), $match = {
-          '$match': {'ts': {'$gt': Timestamp(t1, 0), '$lte': Timestamp(t2, 0)}}
-        },
-        $project = {'$unset': '_id'};
-    let pipeline = [$match, $project], options = {
-      'allowDiskUse': true,
-      'cursor': {'batchSize': 0},
-      'comment': 'Oplog churn calculation'
-    };
-
-    db.getMongo().setReadPref(readPref);
-    let oplog = db.getSiblingDB('local').getCollection('oplog.rs');
-
-    pipeline.push({
-      '$group': {
-        '_id': null,
-        '_bsonDataSize': {'$sum': {'$bsonSize': '$$ROOT'}},
-        '_documentCount': {'$sum': 1}
-      }
-    });
-
-    ([{'_bsonDataSize': opSize, '_documentCount': docs}] =
-         oplog.aggregate(pipeline, options).toArray());
-
-    let {
-      'wiredTiger': {
-        creationString,
-        'block-manager': {
-          'file bytes available for reuse': blocksFree,
-          'file size in bytes': storageSize
-        }
-      },
-      size,
-      internalPageSize =
-          (creationString.match(/internal_page_max=(\d+)/)[1] * 1024)
-    } = oplog.stats();
-    let overhead = internalPageSize;
-    let ratio = +((size / (storageSize - blocksFree - overhead)).toFixed(2));
-    let oplogChurn = opSize / ratio / intervalHrs;
-
-    printInfo('Oplog Churn Rate', function() {
-      return oplogChurn;
-    }, section);
-  } else {
-    printInfo('Oplog Churn Rate', function() {
-      'Oplog does not exist on standalone nodes or mongos';
-    }, section);
-  }
 }
 
 // find all QE collections
@@ -674,7 +588,6 @@ function printDataInfo(isMongoS) {
 }
 
 function printShardOrReplicaSetInfo() {
-    let topology;
     section = "shard_or_replicaset_info";
     printInfo('isMaster', function(){return db.isMaster()}, section);
     var state;
@@ -695,13 +608,12 @@ function printShardOrReplicaSetInfo() {
         }
         if ( ! state ) {
           state = "standalone";
-          topology = 'standalone';
         }
     }
     if (! _printJSON) print("\n** Connected to " + state);
     if (state == "mongos") {
-        topology = 'Sharded Cluster';
         printShardInfo();
+        return true;
     } else if (state != "standalone" && state != "configsvr") {
         if (state == "SECONDARY" || state == 2) {
             if (rs.secondaryOk) {
@@ -710,10 +622,9 @@ function printShardOrReplicaSetInfo() {
                 rs.slaveOk();
             }
         }
-        topology = 'Replica Set';
         printReplicaSetInfo();
     }
-    return topology;
+    return false;
 }
 
 if (typeof _printJSON === "undefined") var _printJSON = true;
@@ -752,18 +663,10 @@ var _host = hostname();
 
 try {
   printServerInfo();
-  let topology = printShardOrReplicaSetInfo();
-  let isMongoS = false;
-  if (topology === 'Sharded Cluster') {
-    isMongoS = true;
-  }
-  printInfo('Topology', function() {
-    return topology;
-  }, 'topology');
+  let isMongoS = printShardOrReplicaSetInfo();
   printUserAuthInfo();
   printDataInfo(isMongoS);
   printDriverVersions();
-  printOplogChurn(isMongoS, topology);
 } catch(e) {
     // To ensure that the operator knows there was an error, print the error
     // even when outputting JSON to make it invalid JSON.
