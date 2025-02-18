@@ -56,7 +56,12 @@
  * limitations under the License.
  */
 
-var _version = "3.2.0";
+// Potentially breaking changes in "4.0.0" with respect to "3.2.0":
+//  -   _printJSON with _maxCollections no longer renames sections with "INCOMPLETE_" prefix when 
+//      _maxCollections is reached. Instead, the last element of the output JSON array contains an 
+//      error message.
+//  -   _printJSON outputs error messages after the JSON array is printed, instead of before. 
+var _version = "4.0.0";
 
 (function () {
    "use strict";
